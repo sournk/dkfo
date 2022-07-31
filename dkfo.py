@@ -11,25 +11,29 @@ import sys
 import time
 import shutil
 import datetime as dt
+import argparse
 
-ARCHIVE_DIR_NAME = '!Archive' # Subdir name is destanation for moving files in
-DONT_TOUCH_FILES_DEPTH_DAYS = 2 # Paths with cdate early today()-DONT_TOUCH_FILES_DEPTH_DAYS are skiped
-
-def is_old_file(file):
+def is_old_file(file, file_age_limit):
     '''
-    Check creation date of file. If it's created earlier then DONT_TOUCH_FILES_DEPTH_DAYS days file is old.
+    Check creation date of file. If it's created earlier than file_age_limit days file is old.
     '''
     
-    old_file_edge = dt.datetime.today() - dt.timedelta(days=DONT_TOUCH_FILES_DEPTH_DAYS)
+    old_file_edge = dt.datetime.today() - dt.timedelta(days=file_age_limit)
     old_file_edge = old_file_edge.timestamp()
     return os.path.getmtime(file) < old_file_edge
     
-path_src = sys.argv[1]
-path_dst = os.path.join(path_src, ARCHIVE_DIR_NAME)
+parser = argparse.ArgumentParser(description='dkfo script orginize directory by moving files from dir/!Archive/dd')
+parser.add_argument("--dir", default='.', type=str, help="Path to orginize. Default is '.'")
+parser.add_argument("--file_age_limit", default=0, type=int, help="Moves only files older than age limit in days. Default is 0 days.")
+parser.add_argument("--subdir_name", default='!Archive', type=str, help="Name of subdir to move files in. Default is '!Archive'")
+args = parser.parse_args()
+
+path_src = args.dir
+path_dst = os.path.join(path_src, args.subdir_name)
 
 files = [os.path.join(path_src, f) for f in os.listdir(path_src)] # list of full paths files and dirs
 files = filter(lambda path: path != path_dst, files) # delete archive dir from list, becasue it's not necessary to move this dir from top level
-files = filter(is_old_file, files) # filter earlier paths from list 
+files = filter(lambda f: is_old_file(f, args.file_age_limit), files) # filter earlier paths from list 
 files = sorted(files)
 
 for f in files:
